@@ -107,4 +107,96 @@ class Grafo:
         visita_dfs(v)
         return pi, v_ini, v_fim
 
-    # TODO: implementar: bf (Bellman-Ford), Dijkstra, Coloração Própria e o Dígrafo
+    # Bellman-Ford: algoritmo para encontrar caminhos mínimos
+    def bf(self, origem):
+        dist = [float('inf')] * self.n_vertices
+        pi = [None] * self.n_vertices
+        dist[origem] = 0
+        
+        # Relaxa as arestas n-1 vezes
+        for k in range(self.n_vertices - 1):
+            for u in range(self.n_vertices):
+                if dist[u] != float('inf'):
+                    for vizinho, peso in self.adj[u]:
+                        if dist[u] + peso < dist[vizinho]:
+                            dist[vizinho] = dist[u] + peso
+                            pi[vizinho] = u
+        
+        # Verifica ciclo negativo
+        for u in range(self.n_vertices):
+            if dist[u] != float('inf'):
+                for vizinho, peso in self.adj[u]:
+                    if dist[u] + peso < dist[vizinho]:
+                        raise ValueError("Grafo contém ciclo de peso negativo")
+        
+        return dist, pi
+    
+    # Dijkstra: algoritmo mais eficiente para caminhos mínimos (não funciona com pesos negativos)
+    def dijkstra(self, origem):
+        import heapq
+        
+        dist = [float('inf')] * self.n_vertices
+        pi = [None] * self.n_vertices
+        dist[origem] = 0
+        
+        # Heap de prioridade com (distância, vértice)
+        heap = [(0, origem)]
+        visitados = set()
+        
+        while heap:
+            dist_atual, u = heapq.heappop(heap)
+            
+            if u in visitados:
+                continue
+                
+            visitados.add(u)
+            
+            # Relaxa as arestas adjacentes
+            for vizinho, peso in self.adj[u]:
+                if vizinho not in visitados:
+                    nova_dist = dist[u] + peso
+                    if nova_dist < dist[vizinho]:
+                        dist[vizinho] = nova_dist
+                        pi[vizinho] = u
+                        heapq.heappush(heap, (dist[vizinho], vizinho))
+        
+        return dist, pi
+    
+    # Coloração própria usando algoritmo guloso (heurística Welsh-Powell)
+    def coloracao_propria(self):
+        cores = [0] * self.n_vertices
+        
+        # Ordena vértices por grau decrescente (heurística)
+        vertices = list(range(self.n_vertices))
+        vertices.sort(key=lambda v: self.d(v), reverse=True)
+        
+        for v in vertices:
+            # Encontra cores usadas pelos vizinhos
+            cores_usadas = set()
+            for vizinho, _ in self.adj[v]:
+                if cores[vizinho] != 0:
+                    cores_usadas.add(cores[vizinho])
+            
+            # Atribui a menor cor disponível
+            cor = 1
+            while cor in cores_usadas:
+                cor += 1
+            cores[v] = cor
+        
+        # Número total de cores usadas
+        num_cores = max(cores) if cores else 0
+        return cores, num_cores
+    
+    # Método auxiliar para reconstruir caminho a partir dos predecessores
+    def reconstruir_caminho(self, pi, origem, destino):
+        if pi[destino] is None and destino != origem:
+            return None  # Não há caminho
+        
+        caminho = []
+        atual = destino
+        while atual is not None:
+            caminho.append(atual)
+            atual = pi[atual]
+        
+        caminho.reverse()
+        return caminho
